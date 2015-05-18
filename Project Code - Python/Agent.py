@@ -22,13 +22,13 @@ class Agent:
 
     # The primary method for solving incoming Raven's Progressive Matrices.
     # For each problem, your Agent's Solve() method will be called. At the
-    # conclusion of Solve(), your Agent should return a String representing its
-    # answer to the question: "1", "2", "3", "4", "5", or "6". These Strings
+    # conclusion of Solve(), your Agent should return an integer representing its
+    # answer to the question: "1", "2", "3", "4", "5", or "6". These integers
     # are also the Names of the individual RavensFigures, obtained through
-    # RavensFigure.getName().
+    # RavensFigure.getName() (as Strings).
     #
     # In addition to returning your answer at the end of the method, your Agent
-    # may also call problem.checkAnswer(String givenAnswer). The parameter
+    # may also call problem.checkAnswer(int givenAnswer). The parameter
     # passed to checkAnswer should be your Agent's current guess for the
     # problem; checkAnswer will return the correct answer to the problem. This
     # allows your Agent to check its answer. Note, however, that after your
