@@ -1,1 +1,28 @@
+Choose one (or more) of the following four topics covered in the course so far. In a response
+of roughly 1000 words, answer the question: how would you use this topic or skill to design
+an agent that can address Raven’s Progressive Matrices?
+
+? Semantic Networks
+? Generate & Test
+? Means-Ends Analysis
+? Production Systems
+
+
 Semantic Networks help us map out our thought process and intuition behind our pattern finding abilities.
+
+
+
+How well does the assignment describe the problem it is attempting to solve?
+? How well does the assignment identify what makes the problem difficult?
+? How well does the assignment articulate its design for a solution to the problem?
+? How well does the assignment leverage the chosen topic or topics in designing that
+solution?
+? How well does the assignment explain how the chosen topic or topics address what
+makes the problem difficult?
+? How well does the assignment expand on the description of the topic or topics that
+was presented in the lecture? In other words, how well does the assignment
+demonstrate understanding of the topic, not just repetition of its vocabulary?
+? How well does the assignment supply enough depth and detail to be able to actually
+implement a system based on this idea?
+? How well does the assignment actually solve the problem? Is the solution proposed by
+the assignment feasible?
