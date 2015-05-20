@@ -43,5 +43,45 @@ class Agent:
     #
     # Make sure to return your answer *as an integer* at the end of Solve().
     # Returning your answer as a string may cause your program to crash.
-    def Solve(self,problem):
-        return -1
+    def Solve(self, problem):
+        answer = -1
+        attributesA = []
+        attributesB = []
+        attributesC = []
+        attributes1 = []
+        attributes2 = []
+        attributes3 = []
+        attributes4 = []
+        attributes5 = []
+        attributes6 = []
+
+        # Comparisons to draw:
+        # problem.figures['A'] to problem.figures['B']
+        # problem.figures['A'] to problem.figures['C']
+        # problem.figures['C'] to answer
+        '''
+        -Compare A to B
+        -Compare A to C
+        -Establish attribute changes for each comparison
+
+        -Compare C to 1, 2, 3, 4, 5, and 6
+        -Compare B to 1, 2, 3, 4, 5, and 6
+        -Choose answer such that attribute changes from A to B are same as C to x
+                             and attribute changes from A to C are same as B to x
+        '''
+        attributesA = problem.figures['A'].objects['a'].attributes
+        attributesB = problem.figures['B'].objects['b'].attributes
+        attributesC = problem.figures['C'].objects['c'].attributes
+
+        attributes1 = problem.figures['1'].objects['d'].attributes
+        attributes2 = problem.figures['2'].objects['e'].attributes
+        attributes3 = problem.figures['3'].objects['f'].attributes
+        attributes4 = problem.figures['4'].objects['g'].attributes
+        attributes5 = problem.figures['5'].objects['h'].attributes
+        attributes6 = problem.figures['6'].objects['i'].attributes
+
+        print problem.name
+        print "Correct answer: ", problem.correctAnswer
+        print "Answer selected: ", answer, '\n'
+
+        return answer
