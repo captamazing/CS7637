@@ -47,9 +47,12 @@ class Agent:
     # Returning your answer as a string may cause your program to crash.
     def Solve(self, problem):
         attribute_list = ['shape', 'fill', 'size', 'angle', 'inside', 'above', 'overlaps', 'angle', 'alignment']
+
         sizes = ['very small', 'small', 'medium', 'large', 'very large', 'huge'] # index = size value
 
         def get_relationship(figure1, figure2):
+
+
             '''
             figure
                 objects
@@ -71,19 +74,32 @@ class Agent:
 
 
             # Store all attributes
-            for i in range(len(figure1.objects)):
-                for j in range(len(figure1.objects[i].attributes)):
-                    for k in range(len(attribute_list)):
-                        try:
-                            attribute_list[k]
-                        except:
-                            print attribute_list[k], ' not present'
 
-                attributes1.append(figure1.objects[i].attributes)
-
-            for i in range(len(figure2.objects)):
-                attributes2.append(figure2.objects[i].attributes)
-
+            figure1_object_keys = figure1.objects.keys()
+            figure2_object_keys = figure1.objects.keys()
+            shape_rel = ''
+            fill_rel = ''
+            for i in range(len(figure1_object_keys)):
+                figure1_object = figure1.objects[figure1_object_keys[i]]
+                figure2_object = figure2.objects[figure2_object_keys[i]]
+                if ('shape' in figure1_object.attributes) and ('shape' in figure2_object.attributes):
+                    relationship['shape'] = figure1_object.attributes['shape']
+                if ('fill' in figure1_object.attributes) and ('fill' in figure2_object.attributes):
+                    figure1_object.attributes['fill']
+                if ('size' in figure1_object.attributes) and ('size' in figure2_object.attributes):
+                    figure1_object.attributes['size']
+                if ('angle' in figure1_object.attributes) and ('angle' in figure2_object.attributes):
+                    figure1_object.attributes['angle']
+                if ('inside' in figure1_object.attributes) and ('inside' in figure2_object.attributes):
+                    figure1_object.attributes['inside']
+                if ('above' in figure1_object.attributes) and ('above' in figure2_object.attributes):
+                    figure1_object.attributes['above']
+                if ('overlaps' in figure1_object.attributes) and ('overlaps' in figure2_object.attributes):
+                    figure1_object.attributes['overlaps']
+                if ('angle' in figure1_object.attributes) and ('angle' in figure2_object.attributes):
+                    figure1_object.attributes['angle']
+                if ('alignment' in figure1_object.attributes) and ('alignment' in figure2_object.attributes):
+                    figure1_object.attributes['alignment']
 
 
             return relationship
