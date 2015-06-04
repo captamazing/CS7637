@@ -46,96 +46,81 @@ class Agent:
     # Make sure to return your answer *as an integer* at the end of Solve().
     # Returning your answer as a string may cause your program to crash.
     def Solve(self, problem):
-        attribute_list = ['shape', 'fill', 'size', 'angle', 'inside', 'above', 'overlaps', 'angle', 'alignment']
-
-        sizes = ['very small', 'small', 'medium', 'large', 'very large', 'huge'] # index = size value
+        attribute_list = ['shape', 'fill', 'size', 'angle', 'inside', 'above', 'overlaps', 'alignment']
+        sizes_list = ['very small', 'small', 'medium', 'large', 'very large', 'huge']  # index = size value
+        answer = -1
 
         def get_relationship(figure1, figure2):
-
-
-            '''
-            figure
-                objects
-                    attributes
-                        name
-                        value
-
-            relationship
-                figures
-                    objects
-                        attribute changes
-                            name
-                            value change
-            '''
-
-            relationship = {}
-            attributes1 = []
-            attributes2 = []
-
-
+            relationships = []
             # Store all attributes
 
             figure1_object_keys = figure1.objects.keys()
-            figure2_object_keys = figure1.objects.keys()
-            shape_rel = ''
-            fill_rel = ''
-            for i in range(len(figure1_object_keys)):
-                figure1_object = figure1.objects[figure1_object_keys[i]]
-                figure2_object = figure2.objects[figure2_object_keys[i]]
-                if ('shape' in figure1_object.attributes) and ('shape' in figure2_object.attributes):
-                    relationship['shape'] = figure1_object.attributes['shape']
-                if ('fill' in figure1_object.attributes) and ('fill' in figure2_object.attributes):
-                    figure1_object.attributes['fill']
-                if ('size' in figure1_object.attributes) and ('size' in figure2_object.attributes):
-                    figure1_object.attributes['size']
-                if ('angle' in figure1_object.attributes) and ('angle' in figure2_object.attributes):
-                    figure1_object.attributes['angle']
-                if ('inside' in figure1_object.attributes) and ('inside' in figure2_object.attributes):
-                    figure1_object.attributes['inside']
-                if ('above' in figure1_object.attributes) and ('above' in figure2_object.attributes):
-                    figure1_object.attributes['above']
-                if ('overlaps' in figure1_object.attributes) and ('overlaps' in figure2_object.attributes):
-                    figure1_object.attributes['overlaps']
-                if ('angle' in figure1_object.attributes) and ('angle' in figure2_object.attributes):
-                    figure1_object.attributes['angle']
-                if ('alignment' in figure1_object.attributes) and ('alignment' in figure2_object.attributes):
-                    figure1_object.attributes['alignment']
+            figure2_object_keys = figure2.objects.keys()
+            max_num_objects = max([len(figure1_object_keys), len(figure2_object_keys)])
+            for i in range(max_num_objects):
+                relationship = {}
 
+                if i > len(figure2_object_keys):
+                    relationship['deleted'] = True
 
+                if i > len(figure1_object_keys):
+                    relationship['added'] = True
+                    figure2_object = figure2.objects[figure2_object_keys[i]]
+
+                    for j in range(len(figure2_object.attributes)):
+                        if attribute_list[j] in figure2_object.attributes:
+                            relationship[attribute_list[j]] = figure2_object.attributes[attribute_list[j]]
+
+                else:
+                    figure1_object = figure1.objects[figure1_object_keys[i]]
+                    figure2_object = figure2.objects[figure2_object_keys[i]]
+                    if ('shape' in figure1_object.attributes) and ('shape' in figure2_object.attributes):
+                        if figure1_object.attributes['shape'] == figure2_object.attributes['shape']:
+                            relationship['shape'] = 'same'
+                        else:
+                            relationship['shape'] = figure1_object.attributes['shape'] + " " + figure2_object.attributes['shape']
+
+                    if ('fill' in figure1_object.attributes) and ('fill' in figure2_object.attributes):
+                        if figure1_object.attributes['fill'] == figure2_object.attributes['fill']:
+                            relationship['fill'] = 'same'
+                        else:
+                            relationship['fill'] = figure1_object.attributes['fill'] + " " + figure1_object.attributes['fill']
+
+                    if ('size' in figure1_object.attributes) and ('size' in figure2_object.attributes):
+                        figure1_size_value = sizes_list.index(figure1_object.attributes['size'])
+                        figure2_size_value = sizes_list.index(figure2_object.attributes['size'])
+                        relationship['size'] = figure1_size_value - figure2_size_value
+
+                    if ('angle' in figure1_object.attributes) and ('angle' in figure2_object.attributes):
+                        figure1_angle = int(float(figure1_object.attributes['angle']))
+                        figure2_angle = int(float(figure2_object.attributes['angle']))
+                        relationship['angle'] = figure1_angle - figure2_angle
+
+                    if ('inside' in figure1_object.attributes) and ('inside' in figure2_object.attributes):
+                        figure1_object.attributes['inside']
+
+                    if ('above' in figure1_object.attributes) and ('above' in figure2_object.attributes):
+                        figure1_object.attributes['above']
+
+                    if ('overlaps' in figure1_object.attributes) and ('overlaps' in figure2_object.attributes):
+                        figure1_object.attributes['overlaps']
+
+                    if ('alignment' in figure1_object.attributes) and ('alignment' in figure2_object.attributes):
+                        figure1_object.attributes['alignment']
+
+                relationships.append(relationship)
             return relationship
 
-        answer = -1
+        def get_solution_score(relationship_a_b, relationship_a_c, relationship_b_sol, relationship_c_sol):
 
-        '''
-        ================
-           OLD CODE
-        ================
-        attributesA = []
-        attributesB = []
-        attributesC = []
-        attributes1 = []
-        attributes2 = []
-        attributes3 = []
-        attributes4 = []
-        attributes5 = []
-        attributes6 = []
+            num_objects = len(relationship_a_b)
+            for i in range(len(num_objects)):
+                vertical_object = relationship_a_b[i]
+                vertical_object_sol = relationship_c_sol[i]
 
-        attributesA = problem.figures['A'].objects['a'].attributes
-        attributesB = problem.figures['B'].objects['b'].attributes
-        attributesC = problem.figures['C'].objects['c'].attributes
+                horizontal_object = relationship_a_c[i]
+                vertical_object_sol = relationship_b_sol[i]
 
-        attributes1 = problem.figures['1'].objects['d'].attributes
-        attributes2 = problem.figures['2'].objects['e'].attributes
-        attributes3 = problem.figures['3'].objects['f'].attributes
-        attributes4 = problem.figures['4'].objects['g'].attributes
-        attributes5 = problem.figures['5'].objects['h'].attributes
-        attributes6 = problem.figures['6'].objects['i'].attributes
-        '''
-
-        # Comparisons to draw:
-        # problem.figures['A'] to problem.figures['B']
-        # problem.figures['A'] to problem.figures['C']
-        # problem.figures['C'] to answer
         '''
         -Compare A to B
         -Compare A to C
@@ -161,24 +146,23 @@ class Agent:
         relationship_a_b = get_relationship(problem.figures['A'], problem.figures['B'])
         relationship_a_c = get_relationship(problem.figures['A'], problem.figures['C'])
 
-        # Merge relationships
-        final_transform = []
-
+        # Used for indexing
         num_matrices_in_problem = 0
         if problem.problemType == '2x2':
             num_matrices_in_problem = 3
         elif problem.problemType == '3x3':
             num_matrices_in_problem = 8
 
+        scores = []
         for i in range(len(problem.figures) - num_matrices_in_problem):
-            relationship_b_sol = get_relationship(problem.figures['B'], problem.figures[i + 2])
-            relationship_c_sol = get_relationship(problem.figures['C'], problem.figures[i + 2])
+            relationship_b_sol = get_relationship(problem.figures['B'], problem.figures[i + num_matrices_in_problem - 1])
+            relationship_c_sol = get_relationship(problem.figures['C'], problem.figures[i + num_matrices_in_problem - 1])
 
-            # Merge relationships
-            sol_transform = []
+            score = get_solution_score(relationship_a_b, relationship_a_c, relationship_b_sol, relationship_c_sol)
 
-            # if final_transform equals sol_transform
+            scores.append[score]
 
+        answer = scores.index(max(scores)) + 1      # Solution number = index + 1
         print problem.name
         print "Correct answer: ", problem.correctAnswer
         print "Answer selected: ", answer, '\n'
