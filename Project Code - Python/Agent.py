@@ -50,15 +50,17 @@ class Agent:
         sizes_list = ['very small', 'small', 'medium', 'large', 'very large', 'huge']  # index = size value
         answer = -1
 
-        def get_relationship(figure1, figure2):
-            relationships = []
+        def get_transform(figure1, figure2):
+            transform = []
             # Store all attributes
 
-            figure1_object_keys = figure1.objects.keys()
-            figure2_object_keys = figure2.objects.keys()
+            figure1_object_keys = sorted(figure1.objects.keys())
+            figure2_object_keys = sorted(figure2.objects.keys())
             max_num_objects = max([len(figure1_object_keys), len(figure2_object_keys)])
             for i in range(max_num_objects):
                 relationship = {}
+                relationship['deleted'] = False
+                relationship['added'] = False
 
                 if i > len(figure2_object_keys):
                     relationship['deleted'] = True
@@ -108,19 +110,28 @@ class Agent:
                     if ('alignment' in figure1_object.attributes) and ('alignment' in figure2_object.attributes):
                         figure1_object.attributes['alignment']
 
-                relationships.append(relationship)
-            return relationship
+                transform.append(relationship)
+            return transform
 
-        def get_solution_score(relationship_a_b, relationship_a_c, relationship_b_sol, relationship_c_sol):
+        def get_solution_score(transform_a_b, transform_a_c, transform_b_sol, transform_c_sol):
 
-            num_objects = len(relationship_a_b)
-            for i in range(len(num_objects)):
-                vertical_object = relationship_a_b[i]
-                vertical_object_sol = relationship_c_sol[i]
+            num_relationships = len(transform_a_b)  # All relationships should have the same number of objects
+            score = 0
+            for i in range(num_relationships):
+                vertical_relationship = transform_a_b[i]
+                vertical_relationship_sol = transform_c_sol[i]
 
-                horizontal_object = relationship_a_c[i]
-                vertical_object_sol = relationship_b_sol[i]
+                horizontal_relationship = transform_a_c[i]
+                horizontal_relationship_sol = transform_b_sol[i]
 
+                relationship_attributes = sorted(vertical_relationship.keys())
+                for j in range(len(relationship_attributes)):
+                    if vertical_relationship[relationship_attributes[j]] == vertical_relationship_sol[relationship_attributes[j]]:
+                        score += 1
+                    if horizontal_relationship[relationship_attributes[j]] == horizontal_relationship_sol[relationship_attributes[j]]:
+                        score += 1
+
+            return score
         '''
         -Compare A to B
         -Compare A to C
@@ -143,8 +154,8 @@ class Agent:
             -Compare to relationship/transform found above
         '''
 
-        relationship_a_b = get_relationship(problem.figures['A'], problem.figures['B'])
-        relationship_a_c = get_relationship(problem.figures['A'], problem.figures['C'])
+        transform_a_b = get_transform(problem.figures['A'], problem.figures['B'])
+        transform_a_c = get_transform(problem.figures['A'], problem.figures['C'])
 
         # Used for indexing
         num_matrices_in_problem = 0
@@ -154,13 +165,15 @@ class Agent:
             num_matrices_in_problem = 8
 
         scores = []
-        for i in range(len(problem.figures) - num_matrices_in_problem):
-            relationship_b_sol = get_relationship(problem.figures['B'], problem.figures[i + num_matrices_in_problem - 1])
-            relationship_c_sol = get_relationship(problem.figures['C'], problem.figures[i + num_matrices_in_problem - 1])
+        problem_figure_keys = sorted(problem.figures.keys())
+        num_solutions = 6
+        for i in range(num_solutions):
+            transform_b_sol = get_transform(problem.figures['B'], problem.figures[problem_figure_keys[i]])
+            transform_c_sol = get_transform(problem.figures['C'], problem.figures[problem_figure_keys[i]])
 
-            score = get_solution_score(relationship_a_b, relationship_a_c, relationship_b_sol, relationship_c_sol)
+            score = get_solution_score(transform_a_b, transform_a_c, transform_b_sol, transform_c_sol)
 
-            scores.append[score]
+            scores.append(score)
 
         answer = scores.index(max(scores)) + 1      # Solution number = index + 1
         print problem.name
