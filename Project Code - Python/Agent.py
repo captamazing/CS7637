@@ -73,9 +73,17 @@ class Agent:
                         if attribute_list[j] in figure2_object.attributes:
                             relationship[attribute_list[j]] = figure2_object.attributes[attribute_list[j]]
 
-                else:
-                    figure1_object = figure1.objects[figure1_object_keys[i]]
-                    figure2_object = figure2.objects[figure2_object_keys[i]]
+                elif i < len(figure1_object_keys) and i < len(figure2_object_keys):
+                    try:
+                        figure1_object = figure1.objects[figure1_object_keys[i]]
+                        figure2_object = figure2.objects[figure2_object_keys[i]]
+                    except IndexError:
+                        print 'index: ', i
+                        print 'figure1 keys: ', figure1_object_keys
+                        print 'figure1: ', figure1_object
+                        print 'figure2 keys: ', figure2_object_keys
+                        print 'figure2: ', figure2_object
+
                     if ('shape' in figure1_object.attributes) and ('shape' in figure2_object.attributes):
                         if figure1_object.attributes['shape'] == figure2_object.attributes['shape']:
                             relationship['shape'] = 'same'
@@ -126,10 +134,15 @@ class Agent:
 
                 relationship_attributes = sorted(vertical_relationship.keys())
                 for j in range(len(relationship_attributes)):
-                    if vertical_relationship[relationship_attributes[j]] == vertical_relationship_sol[relationship_attributes[j]]:
-                        score += 1
-                    if horizontal_relationship[relationship_attributes[j]] == horizontal_relationship_sol[relationship_attributes[j]]:
-                        score += 1
+                    try:
+                        if vertical_relationship[relationship_attributes[j]] == vertical_relationship_sol[relationship_attributes[j]]:
+                            score += 1
+                        if horizontal_relationship[relationship_attributes[j]] == horizontal_relationship_sol[relationship_attributes[j]]:
+                            score += 1
+                    except KeyError:
+                        print 'Key not found: ', relationship_attributes[j]
+                    except IndexError:
+                        print 'Index out of range: ', j
 
             return score
         '''
