@@ -199,9 +199,11 @@ class Agent:
                             if horizontal_relationship[relationship_attributes[j]] == horizontal_relationship_sol[relationship_attributes[j]]:
                                 score += points_attribute
                     except KeyError:
-                        print 'Key not found: ', relationship_attributes[j]
+                        pass
+                        #print 'Key not found: ', relationship_attributes[j]
                     except IndexError:
-                        print 'Index out of range: ', j
+                        pass
+                        #print 'Index out of range: ', j
 
             return score
 
