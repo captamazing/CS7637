@@ -48,6 +48,10 @@ class Agent:
     def Solve(self, problem):
         attribute_list = ['shape', 'fill', 'size', 'angle', 'inside', 'above', 'overlaps', 'alignment']
         sizes_list = ['very small', 'small', 'medium', 'large', 'very large', 'huge']  # index = size value
+        points_attribute = 1
+        points_pattern = 2
+
+        problem_name = problem.name
         answer = -1
 
         def get_transform(figure1, figure2):
@@ -62,9 +66,11 @@ class Agent:
                 relationship['deleted'] = False
                 relationship['added'] = False
 
+                # Figure 1 has more objects
                 if i > len(figure2_object_keys):
                     relationship['deleted'] = True
 
+                # Figure 2 has more objects
                 if i > len(figure1_object_keys):
                     relationship['added'] = True
                     figure2_object = figure2.objects[figure2_object_keys[i]]
@@ -74,15 +80,8 @@ class Agent:
                             relationship[attribute_list[j]] = figure2_object.attributes[attribute_list[j]]
 
                 elif i < len(figure1_object_keys) and i < len(figure2_object_keys):
-                    try:
-                        figure1_object = figure1.objects[figure1_object_keys[i]]
-                        figure2_object = figure2.objects[figure2_object_keys[i]]
-                    except IndexError:
-                        print 'index: ', i
-                        print 'figure1 keys: ', figure1_object_keys
-                        print 'figure1: ', figure1_object
-                        print 'figure2 keys: ', figure2_object_keys
-                        print 'figure2: ', figure2_object
+                    figure1_object = figure1.objects[figure1_object_keys[i]]
+                    figure2_object = figure2.objects[figure2_object_keys[i]]
 
                     if ('shape' in figure1_object.attributes) and ('shape' in figure2_object.attributes):
                         if figure1_object.attributes['shape'] == figure2_object.attributes['shape']:
@@ -94,7 +93,7 @@ class Agent:
                         if figure1_object.attributes['fill'] == figure2_object.attributes['fill']:
                             relationship['fill'] = 'same'
                         else:
-                            relationship['fill'] = figure1_object.attributes['fill'] + " " + figure1_object.attributes['fill']
+                            relationship['fill'] = figure1_object.attributes['fill'] + " " + figure2_object.attributes['fill']
 
                     if ('size' in figure1_object.attributes) and ('size' in figure2_object.attributes):
                         figure1_size_value = sizes_list.index(figure1_object.attributes['size'])
@@ -102,12 +101,30 @@ class Agent:
                         relationship['size'] = figure1_size_value - figure2_size_value
 
                     if ('angle' in figure1_object.attributes) and ('angle' in figure2_object.attributes):
-                        figure1_angle = int(float(figure1_object.attributes['angle']))
-                        figure2_angle = int(float(figure2_object.attributes['angle']))
-                        relationship['angle'] = figure1_angle - figure2_angle
+                        if figure1_object.attributes['angle'] == figure2_object.attributes['angle']:
+                            relationship['angle'] = 'same'
+                        else:
+                            relationship['angle'] = figure1_object.attributes['angle'] + " " + figure2_object.attributes['angle']
 
-                    if ('inside' in figure1_object.attributes) and ('inside' in figure2_object.attributes):
-                        figure1_object.attributes['inside']
+                    if 'inside' in figure1_object.attributes and 'inside' not in figure2_object.attributes:
+                        relationship['inside'] = 'deleted'
+                    elif 'inside' in figure2_object.attributes and 'inside' not in figure1_object.attributes:
+                        relationship['inside'] = 'created'
+                    elif 'inside' in figure1_object.attributes and 'inside' in figure2_object.attributes:
+                        figure1_attribute_keys = sorted(figure1_object.attributes.keys())
+                        figure2_attribute_keys = sorted(figure2_object.attributes.keys())
+
+                        if figure1_attribute_keys == figure2_attribute_keys:
+                            for attribute_key in figure1_attribute_keys:
+                                if attribute_key == 'inside':
+                                    continue
+                                else:
+                                    if (figure1_object.attributes[attribute_key] == figure2_object.attributes[attribute_key]):
+                                        pass
+                                    else:
+                                        relationship['inside'] = 'changed'
+                                        break
+                                relationship['inside'] = 'same'
 
                     if ('above' in figure1_object.attributes) and ('above' in figure2_object.attributes):
                         figure1_object.attributes['above']
@@ -116,83 +133,167 @@ class Agent:
                         figure1_object.attributes['overlaps']
 
                     if ('alignment' in figure1_object.attributes) and ('alignment' in figure2_object.attributes):
-                        figure1_object.attributes['alignment']
+                        relationship['alignment'] = figure1_object.attributes['alignment'] + " " + figure2_object.attributes['alignment']
+
+                if 'inside' in figure1_object.attributes and 'inside' not in figure2_object.attributes:
+                    relationship['inside'] = 'deleted'
+                elif 'inside' in figure2_object.attributes and 'inside' not in figure1_object.attributes:
+                    relationship['inside'] = 'created'
+                elif 'inside' in figure1_object.attributes and 'inside' in figure2_object.attributes:
+                    figure1_attribute_keys = sorted(figure1_object.attributes.keys())
+                    figure2_attribute_keys = sorted(figure2_object.attributes.keys())
+
+                    if figure1_attribute_keys == figure2_attribute_keys:
+                        for attribute_key in figure1_attribute_keys:
+                            if attribute_key == 'inside':
+                                continue
+                            else:
+                                if (figure1_object.attributes[attribute_key] == figure2_object.attributes[attribute_key]):
+                                    pass
+                                else:
+                                    relationship['inside'] = 'changed'
+                                    break
+                            relationship['inside'] = 'same'
 
                 transform.append(relationship)
             return transform
 
         def get_solution_score(transform_a_b, transform_a_c, transform_b_sol, transform_c_sol):
+            len_a_b = len(transform_a_b)
+            len_a_c = len(transform_a_c)
+            len_b_sol = len(transform_b_sol)
+            len_c_sol = len(transform_c_sol)
 
-            num_relationships = len(transform_a_b)  # All relationships should have the same number of objects
+            num_objects_list = [len_a_b, len_a_c, len_b_sol, len_c_sol]
+            num_objects = max(num_objects_list)
             score = 0
-            for i in range(num_relationships):
-                vertical_relationship = transform_a_b[i]
-                vertical_relationship_sol = transform_c_sol[i]
+            for i in range(num_objects):
+                if num_objects > len(transform_a_b) or num_objects > len(transform_a_c) or num_objects > len(transform_b_sol) or num_objects > len(transform_c_sol):
+                    continue
 
-                horizontal_relationship = transform_a_c[i]
-                horizontal_relationship_sol = transform_b_sol[i]
+                vertical_relationship = transform_a_c[i]
+                vertical_relationship_sol = transform_b_sol[i]
+
+                horizontal_relationship = transform_a_b[i]
+                horizontal_relationship_sol = transform_c_sol[i]
 
                 relationship_attributes = sorted(vertical_relationship.keys())
                 for j in range(len(relationship_attributes)):
                     try:
-                        if vertical_relationship[relationship_attributes[j]] == vertical_relationship_sol[relationship_attributes[j]]:
-                            score += 1
-                        if horizontal_relationship[relationship_attributes[j]] == horizontal_relationship_sol[relationship_attributes[j]]:
-                            score += 1
+                        if relationship_attributes[j] == 'alignment':
+                            if has_alignment_pattern(vertical_relationship[relationship_attributes[j]],
+                                                     vertical_relationship_sol[relationship_attributes[j]],
+                                                     horizontal_relationship[relationship_attributes[j]],
+                                                     horizontal_relationship_sol[relationship_attributes[j]]):
+                                score += points_pattern
+
+                        elif relationship_attributes[j] == 'angle':
+                            if has_angle_pattern(vertical_relationship[relationship_attributes[j]],
+                                                 vertical_relationship_sol[relationship_attributes[j]],
+                                                 horizontal_relationship[relationship_attributes[j]],
+                                                 horizontal_relationship_sol[relationship_attributes[j]]):
+                                score += points_pattern
+                        else:
+                            if vertical_relationship[relationship_attributes[j]] == vertical_relationship_sol[relationship_attributes[j]]:
+                                score += points_attribute
+                            if horizontal_relationship[relationship_attributes[j]] == horizontal_relationship_sol[relationship_attributes[j]]:
+                                score += points_attribute
                     except KeyError:
                         print 'Key not found: ', relationship_attributes[j]
                     except IndexError:
                         print 'Index out of range: ', j
 
             return score
-        '''
-        -Compare A to B
-        -Compare A to C
-        -Establish attribute changes for each comparison
 
-        -Compare C to 1, 2, 3, 4, 5, and 6
-        -Compare B to 1, 2, 3, 4, 5, and 6
-        -Choose answer such that attribute changes from A to B are same as C to x
-                             and attribute changes from A to C are same as B to x
+        def has_alignment_pattern(alignment_a_c, alignment_b_sol, alignment_a_b, alignment_c_sol):
+            if (alignment_a_b == alignment_c_sol) and (alignment_a_c == alignment_b_sol):
+                return True
 
-        ======================================================
-        -Create relationship between figure A and B
-        -Create relationship between figure A and C
-        -Create common relationship/transform
+            alignments_a_b = alignment_a_b.split(" ")
+            alignments_c_sol = alignment_c_sol.split(" ")
+            alignments = [alignments_a_b[0], alignments_a_b[1], alignments_c_sol[0], alignments_c_sol[1]]
+            all_unique = True
+            for alignment in alignments:
+                count = alignments.count(alignment)
+                if count > 1:
+                    all_unique = False
+                    break
+            if all_unique:
+                return True
 
-        -For each solution:
-            -Create relationship between figure B and solution
-            -Create relationship between figure C and solution
-            -Create common relationship/transform
-            -Compare to relationship/transform found above
-        '''
+            return False
 
-        transform_a_b = get_transform(problem.figures['A'], problem.figures['B'])
-        transform_a_c = get_transform(problem.figures['A'], problem.figures['C'])
+        def has_angle_pattern(angle_a_c, angle_b_sol, angle_a_b, angle_c_sol):
+            if (angle_a_b == angle_c_sol) and (angle_a_c == angle_b_sol):
+                return True
 
-        # Used for indexing
-        num_matrices_in_problem = 0
-        if problem.problemType == '2x2':
-            num_matrices_in_problem = 3
-        elif problem.problemType == '3x3':
-            num_matrices_in_problem = 8
+            if "same" in angle_a_c or "same" in angle_b_sol or "same" in angle_a_b or "same" in angle_c_sol:
+                return False
+            
+            # If we made it this far, we know each angle transformation contains only numbers
+            
+            angles_a_b = angle_a_b.split(" ")
+            angle_a = int(float(angles_a_b[0]))
+            angle_b = int(float(angles_a_b[1]))
+
+            angles_c_sol = angle_c_sol.split(" ")
+            angle_c = int(float(angles_c_sol[0]))
+            angle_sol = int(float(angles_c_sol[1]))
+
+            symmetry_y = False
+            symmetry_x = False
+            # Symmetry across Y-axis
+            if (((90 - angle_a == angle_b - 90) or
+                (270 - angle_a == angle_b - 270))
+                and
+                ((90 - angle_c == angle_sol - 90) or
+                 (270 - angle_c == angle_sol - 270))):
+                symmetry_y = True
+
+            # Symmetry across X-axis
+            if (((180 - angle_a == angle_c - 180) or
+                (360 - angle_a == angle_c))
+                and
+                ((180 - angle_b == angle_sol - 180) or
+                 (360 - angle_b == angle_sol))):
+                symmetry_x = True
+
+            return symmetry_y and symmetry_x
+
+        figure_a = problem.figures['A']
+        figure_b = problem.figures['B']
+        figure_c = problem.figures['C']
+
+        transform_a_b = get_transform(figure_a, figure_b)
+        transform_a_c = get_transform(figure_a, figure_c)
 
         scores = []
         problem_figure_keys = sorted(problem.figures.keys())
         num_solutions = 6
         for i in range(num_solutions):
-            transform_b_sol = get_transform(problem.figures['B'], problem.figures[problem_figure_keys[i]])
-            transform_c_sol = get_transform(problem.figures['C'], problem.figures[problem_figure_keys[i]])
+            figure_sol = problem.figures[problem_figure_keys[i]]
+            transform_b_sol = get_transform(figure_b, figure_sol)
+            transform_c_sol = get_transform(figure_c, figure_sol)
 
             score = get_solution_score(transform_a_b, transform_a_c, transform_b_sol, transform_c_sol)
 
             scores.append(score)
 
-        answer = scores.index(max(scores)) + 1      # Solution number = index + 1
+        score_max = max(scores)
+
+        if scores.count(0) >= 2:
+            answer = -1
+        elif score_max > 0:
+            answer = scores.index(score_max) + 1    # Solution number = index + 1
+        else:
+            answer = -1
+
+        '''
         print problem.name
+        print "Scores :", scores
         print "Correct answer: ", problem.correctAnswer
         print "Answer selected: ", answer, '\n'
-
+        '''
         return answer
 
 
