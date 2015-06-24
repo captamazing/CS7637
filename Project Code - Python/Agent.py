@@ -11,10 +11,7 @@
 # Install Pillow and uncomment this line to access image processing.
 #from PIL import Image
 
-from KnowledgeBase import KnowledgeBase
-
 class Agent:
-    knowledge = KnowledgeBase()
 
     attribute_list = ['shape', 'fill', 'size', 'angle', 'inside', 'above', 'overlaps', 'alignment']
     sizes_list = ['very small', 'small', 'medium', 'large', 'very large', 'huge']  # index = size value
