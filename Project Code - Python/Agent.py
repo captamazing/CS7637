@@ -9,7 +9,8 @@
 # These methods will be necessary for the project's main method to run.
 
 # Install Pillow and uncomment this line to access image processing.
-#from PIL import Image
+
+from PIL import Image, ImageChops, ImageOps, ImageStat
 
 class Agent:
 
@@ -21,6 +22,11 @@ class Agent:
     figure_a = []
     figure_b = []
     figure_c = []
+    figure_d = []
+    figure_e = []
+    figure_f = []
+    figure_g = []
+    figure_h = []
     figure_sol = []
 
     list_solutions = []
@@ -29,6 +35,20 @@ class Agent:
     # main().
     def __init__(self):
         pass
+
+    def equal(self, im1, im2):
+        return ImageChops.difference(im1, im2).getbbox() is None
+
+    def compare(self, im1, im2):
+        max_similarity = 0
+        for x_offset in range(-3, 4, 1):
+            for y_offset in range(-3, 4, 1):
+                diff = ImageChops.difference(ImageChops.offset(im1, x_offset, y_offset), im2)
+                num_pixels = im2.size[0] * im1.size[1]
+                diff_stats = ImageStat.Stat(diff)
+                similarity = 1.0 - ((diff_stats.sum[0] / 255) / num_pixels)
+                max_similarity = max(similarity, max_similarity)
+        return max_similarity
 
     def get_transform(self, figure1, figure2):
         transform = []
@@ -242,24 +262,37 @@ class Agent:
         problem_name = problem.name
         answer = -1
 
-        figure_a = problem.figures['A']
-        figure_b = problem.figures['B']
-        figure_c = problem.figures['C']
+        figure_a = Image.open(problem.figures['A'].visualFilename)
+        figure_b = Image.open(problem.figures['B'].visualFilename)
+        figure_c = Image.open(problem.figures['C'].visualFilename)
+        figure_d = Image.open(problem.figures['D'].visualFilename)
+        figure_e = Image.open(problem.figures['E'].visualFilename)
+        figure_f = Image.open(problem.figures['F'].visualFilename)
+        figure_g = Image.open(problem.figures['G'].visualFilename)
+        figure_h = Image.open(problem.figures['H'].visualFilename)
 
-        transform_a_b = self.get_transform(figure_a, figure_b)
-        transform_a_c = self.get_transform(figure_a, figure_c)
+
+        if self.equal(figure_a, figure_d):
+            print "SAME"
+        figure_a.save("fig a.png")
+        out = ImageChops.sub (figure_d, figure_a)
+        out.save("test.png")
+
+
+        transform_horizontal= self.get_transform(figure_a, figure_b, figure_c)
+        transform_vertical = self.get_transform(figure_a, figure_d, figure_g)
 
         scores = []
         problem_figure_keys = sorted(problem.figures.keys())
-        num_solutions = 6
+        num_solutions = 8
         for i in range(num_solutions):
             figure_sol = problem.figures[problem_figure_keys[i]]
             transform_b_sol = self.get_transform(figure_b, figure_sol)
             transform_c_sol = self.get_transform(figure_c, figure_sol)
 
-            score = self.get_solution_score(transform_a_b, transform_a_c, transform_b_sol, transform_c_sol)
+            #score = self.get_solution_score(transform_a_b, transform_a_c, transform_b_sol, transform_c_sol)
 
-            scores.append(score)
+            #scores.append(score)
 
         score_max = max(scores)
 

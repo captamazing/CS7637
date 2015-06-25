@@ -38,4 +38,5 @@ ImageChops
     offset
     subtract
     subtract_modulo
+
 '''
