@@ -13,11 +13,14 @@
 from PIL import Image, ImageChops, ImageOps, ImageStat
 
 class Agent:
-
     attribute_list = ['shape', 'fill', 'size', 'angle', 'inside', 'above', 'overlaps', 'alignment']
     sizes_list = ['very small', 'small', 'medium', 'large', 'very large', 'huge']  # index = size value
     points_attribute = 1
     points_pattern = 2
+
+    threshold = .985
+    points_holistic_symmetry = 5
+    points_bonus = 1
 
     figure_a = []
     figure_b = []
@@ -36,10 +39,12 @@ class Agent:
     def __init__(self):
         pass
 
-    def equal(self, im1, im2):
-        return ImageChops.difference(im1, im2).getbbox() is None
+    def is_equal(self, im1, im2):
+        val = self.get_similarity(im1, im2)
+        print val
+        return val > self.threshold
 
-    def compare(self, im1, im2):
+    def get_similarity(self, im1, im2):
         max_similarity = 0
         for x_offset in range(-3, 4, 1):
             for y_offset in range(-3, 4, 1):
@@ -209,7 +214,65 @@ class Agent:
 
         return False
 
-    def get_solution_score(self, transform_a_b, transform_a_c, transform_b_sol, transform_c_sol):
+    #Merged all figures in problem + solution into a single large image
+    def create_merged_image(self):
+        x_orig = self.figure_a.size[0]
+        y_orig = self.figure_a.size[1]
+        x_new = x_orig * 3
+        y_new = y_orig * 3
+        merged_img = Image.new('RGB', (x_new, y_new))
+
+        x = 0
+        y = 0
+        merged_img.paste(self.figure_a, (x, y))
+        x += x_orig
+        merged_img.paste(self.figure_b, (x, y))
+        x += x_orig
+        merged_img.paste(self.figure_c, (x, y))
+
+        x = 0
+        y += y_orig
+        merged_img.paste(self.figure_d, (x, y))
+        x += x_orig
+        merged_img.paste(self.figure_e, (x, y))
+        x += x_orig
+        merged_img.paste(self.figure_f, (x, y))
+
+        x = 0
+        y += y_orig
+        merged_img.paste(self.figure_g, (x, y))
+        x += x_orig
+        merged_img.paste(self.figure_h, (x, y))
+        x += x_orig
+        merged_img.paste(self.figure_sol, (x, y))
+
+        return merged_img
+
+    #Checks for vertical symmetry (across vertical axis)
+    def has_vertical_symmetry(self, image):
+        return self.is_equal(image, ImageOps.mirror(image))
+
+    #Checks for horizontal symmetry (across horiontal axis)
+    def has_horizontal_symmetry(self, image):
+        return self.is_equal(image, ImageOps.flip(image))
+
+    def get_solution_score(self):
+        score = 0
+        # Check for holistic symmetry
+        eligible_for_bonus = True
+        holistic_image = self.create_merged_image()
+        if self.has_vertical_symmetry(holistic_image):
+            score += self.points_holistic_symmetry
+        else:
+            eligible_for_bonus = False
+        if self.has_horizontal_symmetry(holistic_image):
+            score += self.points_holistic_symmetry
+        else:
+            eligible_for_bonus = False
+        if eligible_for_bonus:
+            score += self.points_bonus
+            eligible_for_bonus = False
+        '''
         len_a_b = len(transform_a_b)
         len_a_c = len(transform_a_c)
         len_b_sol = len(transform_b_sol)
@@ -255,53 +318,46 @@ class Agent:
                 except IndexError:
                     pass
                     #print 'Index out of range: ', j
-
+        '''
         return score
 
     def Solve(self, problem):
         problem_name = problem.name
         answer = -1
 
-        figure_a = Image.open(problem.figures['A'].visualFilename)
-        figure_b = Image.open(problem.figures['B'].visualFilename)
-        figure_c = Image.open(problem.figures['C'].visualFilename)
-        figure_d = Image.open(problem.figures['D'].visualFilename)
-        figure_e = Image.open(problem.figures['E'].visualFilename)
-        figure_f = Image.open(problem.figures['F'].visualFilename)
-        figure_g = Image.open(problem.figures['G'].visualFilename)
-        figure_h = Image.open(problem.figures['H'].visualFilename)
-
-
-        if self.equal(figure_a, figure_d):
-            print "SAME"
-        figure_a.save("fig a.png")
-        out = ImageChops.sub (figure_d, figure_a)
-        out.save("test.png")
-
-
-        transform_horizontal= self.get_transform(figure_a, figure_b, figure_c)
-        transform_vertical = self.get_transform(figure_a, figure_d, figure_g)
+        #Load all figures and make them black OR white (no grey!)
+        self.figure_a = Image.open(problem.figures['A'].visualFilename).convert('L').point(lambda x: 0 if x < 128 else 255, '1')
+        self.figure_b = Image.open(problem.figures['B'].visualFilename).convert('L').point(lambda x: 0 if x < 128 else 255, '1')
+        self.figure_c = Image.open(problem.figures['C'].visualFilename).convert('L').point(lambda x: 0 if x < 128 else 255, '1')
+        self.figure_d = Image.open(problem.figures['D'].visualFilename).convert('L').point(lambda x: 0 if x < 128 else 255, '1')
+        self.figure_e = Image.open(problem.figures['E'].visualFilename).convert('L').point(lambda x: 0 if x < 128 else 255, '1')
+        self.figure_f = Image.open(problem.figures['F'].visualFilename).convert('L').point(lambda x: 0 if x < 128 else 255, '1')
+        self.figure_g = Image.open(problem.figures['G'].visualFilename).convert('L').point(lambda x: 0 if x < 128 else 255, '1')
+        self.figure_h = Image.open(problem.figures['H'].visualFilename).convert('L').point(lambda x: 0 if x < 128 else 255, '1')
 
         scores = []
         problem_figure_keys = sorted(problem.figures.keys())
         num_solutions = 8
         for i in range(num_solutions):
-            figure_sol = problem.figures[problem_figure_keys[i]]
-            transform_b_sol = self.get_transform(figure_b, figure_sol)
-            transform_c_sol = self.get_transform(figure_c, figure_sol)
-
-            #score = self.get_solution_score(transform_a_b, transform_a_c, transform_b_sol, transform_c_sol)
-
-            #scores.append(score)
+            self.figure_sol = Image.open(problem.figures[problem_figure_keys[i]].visualFilename).convert('L').point(lambda x: 0 if x < 128 else 255, '1')
+            self.create_merged_image()
+            score = self.get_solution_score()
+            scores.append(score)
 
         score_max = max(scores)
 
+        if score_max == 0:
+            answer = -1
+        else:
+            answer = score_max
+        '''
         if scores.count(0) >= 2:
             answer = -1
         elif score_max > 0:
             answer = scores.index(score_max) + 1    # Solution number = index + 1
         else:
             answer = -1
+        '''
 
         '''
         print problem.name
