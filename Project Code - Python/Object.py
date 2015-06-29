@@ -20,6 +20,9 @@ class Object:
         if xy[1] < self.min_y:
             self.min_y = xy[1]
 
+    def remove_pixel(self, xy):
+        self.area.remove(xy)
+
     def find_centroid(self):
         x_total = 0
         y_total = 0

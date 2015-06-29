@@ -1,11 +1,19 @@
 from PIL import Image, ImageFilter
 
 filename = "Lenna.png"
+original = Image.open("Lenna.png")
+im = original.crop((0, 0, 100, 100))
+im.show()
+pass
 try:
     original = Image.open("Lenna.png")
     original2 = Image.open("Lenna.png")
     mod = Image.open("Lenna2.png")
     duplicate = Image.open("LennaDup.png")
+
+
+    im = original.crop(0, 0, 100, 100)
+    im.show()
 
     # Does pixel by pixel comparison to determine equality
     if original == original2:

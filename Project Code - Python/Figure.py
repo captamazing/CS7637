@@ -9,7 +9,7 @@ class Figure:
             self.image = Image.open(image_source).convert('L').point(lambda x: 0 if x < 255 else 255, '1')
             #self.image = Image.open(image_source).convert('L').point(lambda x: 0 if x == 0 else 255, '1')
         elif isinstance(image_source, Image.Image):
-            self.image = image_source
+            self.image = image_source.convert('L').point(lambda x: 0 if x < 255 else 255, '1')
 
         self.pixels = self.convert_image_to_pixels_array(self.image)
         self.objects = []
@@ -27,16 +27,21 @@ class Figure:
         im = copy.deepcopy(self.image)
         width, height = im.size
 
-        fill_val = 1
+        dark_fill_val = 1
+        light_fill_val = 254
         for x in range(width):
             for y in range(height):
                 xy = (x, y)
                 l_val = im.getpixel(xy)
 
-                if l_val == 0 or l_val == 255:
-                    ImageDraw.floodfill(im, xy, fill_val)
-                    self.objects.append(Object(xy, fill_val))
-                    fill_val += 1
+                if l_val == 0:
+                    ImageDraw.floodfill(im, xy, dark_fill_val)
+                    self.objects.append(Object(xy, dark_fill_val))
+                    dark_fill_val += 1
+                elif l_val == 255:
+                    ImageDraw.floodfill(im, xy, light_fill_val)
+                    self.objects.append(Object(xy, light_fill_val))
+                    light_fill_val -= 1
                 else:
                     for obj in self.objects:
                         if obj.l_val == l_val:

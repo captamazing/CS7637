@@ -12,6 +12,7 @@
 
 from PIL import Image, ImageChops, ImageOps, ImageStat, ImageDraw
 from Figure import Figure
+from Object import Object
 
 class Agent:
     attribute_list = ['shape', 'fill', 'size', 'angle', 'inside', 'above', 'overlaps', 'alignment']
@@ -55,6 +56,60 @@ class Agent:
                 max_similarity = max(similarity, max_similarity)
         return max_similarity
 
+
+    def translate_object(self, obj, distance):
+        obj_new = Object((0, 0), 0)
+        obj_new.remove_pixel((0, 0))
+
+        for xy in obj.area:
+            obj_new.add_pixel((xy[0] + distance[0], xy[1] + distance[1]))
+
+        obj_new.find_centroid()
+        return obj_new
+
+    def image_from_objects(self, size, objects):
+        image = Image.new('L', size, color=255)
+        for obj in objects:
+            for xy in obj.area:
+                try:
+                    image.putpixel(xy, 0)
+                except:
+                    print xy
+
+        return image
+
+    def horizontal_pass_through(self, figure1, figure2, figure3):
+        im = figure1.image
+        size = im.size
+        im_centroid = (size[0]/2, size[1]/2)
+        max_distance = size[0]/2 - 1
+
+        for i in xrange(0, max_distance, 2):
+            objects_new = []
+
+            for j in xrange(1, len(figure1.objects), 1):
+                obj = figure1.objects[j]
+
+                # Only interested in dark objects
+                if obj.l_val < 128:
+                    # On the left side
+                    if obj.centroid[0] < im_centroid[0]:
+                        obj_new = self.translate_object(obj, (i, 0))
+                    # On the right side
+                    else:
+                        obj_new = self.translate_object(obj, (-i, 0))
+
+                    objects_new.append(obj_new)
+            # end of loop
+
+            im_new = self.image_from_objects(size, objects_new)
+
+            # If equal, we know this is the transform
+            if self.is_equal(im_new, figure2.image):
+                return ['horizontal pass through']
+
+        return ['NOT horizontal pass through']
+
     def get_transform(self, figure1, figure2, figure3):
 
         figure1.identify_objects()
@@ -65,25 +120,14 @@ class Agent:
         figure3.find_centroids()
 
         '''
+        *** TEST CODE ***
+        # Take difference of images and show result
         fig_diff = Figure(ImageChops.difference(figure1.image, figure2.image))
         fig_diff.identify_objects()
         fig_diff.image.show()
-
-        # Redrawing an object to an image
-        obj = figure1.objects[1]
-        size = obj.size()
-        im = Image.new('L', size)
-        for xy in obj.area:
-            print xy
-            im.putpixel((xy[0] - obj.min_x, xy[1] - obj.min_y), 128)
-        im.show()
-
-        # Resizing an image
-        new_im = im.resize((184, 184), Image.BILINEAR)
-        new_im.show()
-        im.show()
         '''
 
+        # Check for resizing
         if len(figure1.objects) == len(figure2.objects) == len(figure3.objects) == 2:
             # Check for simple shape resize
             obj1 = figure1.objects[1]
@@ -94,13 +138,64 @@ class Agent:
             obj2_size = obj2.size()
             obj3_size = obj3.size()
 
-            if (obj3_size[0] - obj2_size[0], obj3_size[1] - obj2_size[1]) == (obj2_size[0] - obj1_size[0], obj2_size[1] - obj1_size[1]):
-                resize_amount = (obj3_size[0] - obj2_size[0], obj3_size[1] - obj2_size[1])
+            xy_diff_23 = (obj3_size[0] - obj2_size[0], obj3_size[1] - obj2_size[1])
+            xy_diff_12 = (obj2_size[0] - obj1_size[0], obj2_size[1] - obj1_size[1])
+
+            if abs(xy_diff_23[0] - xy_diff_12[0]) < 3 and abs(xy_diff_23[1] - xy_diff_12[1]) < 3:
+                resize_amount = ((xy_diff_23[0] + xy_diff_12[0]) / 2, (xy_diff_23[1] + xy_diff_12[1]) / 2)
                 return ['resize', resize_amount]
 
-        pass
+        if len(figure1.objects) >= 2:
+            # Check for Add + Horizontal Slide
+            obj1 = figure1.objects[1]
+            size = figure1.image.size
+            width_image = size[0]
+            width_obj = obj1.size()[0]
+            max_slide_distance = (width_image / 2) - (width_obj / 2)
 
+            for i in xrange(0, max_slide_distance, 2):
+                init_l_val = 255
+                obj1_new = Object((0, 0), 0)
+                obj2_new = Object((0, 0), 0)
+                obj1_new.remove_pixel((0, 0))
+                obj2_new.remove_pixel((0, 0))
 
+                # Slide first two objects away from each other
+                for coord in obj1.area:
+                    obj1_new.add_pixel((coord[0] + i, coord[1]))
+                    obj2_new.add_pixel((coord[0] - i, coord[1]))
+                image_new = Image.new('L', size, color=init_l_val)
+
+                # Make new image with translated objects
+                for xy in obj1_new.area:
+                    image_new.putpixel(xy, 0)
+                for xy in obj2_new.area:
+                    image_new.putpixel(xy, 0)
+
+                # Check if it is correct
+                if self.is_equal(image_new, figure2.image):
+                    image_new = Image.new('L', size, color=init_l_val)
+
+                    # Translate objects again
+                    for xy in obj1_new.area:
+                        image_new.putpixel((xy[0] + i, xy[1]), 0)
+                    for xy in obj2_new.area:
+                        image_new.putpixel((xy[0] - i, xy[1]), 0)
+                    # Add third object
+                    for xy in obj1.area:
+                        image_new.putpixel(xy, 0)
+
+                    # Check that transformation propagates to 3rd figure
+                    if self.is_equal(image_new, figure3.image):
+                        slide_distance = i
+                        return ['add and translate', slide_distance]
+
+        # Check for Horizontal Pass Through
+        result = self.horizontal_pass_through(figure1, figure2, figure3)
+        if result[0] == 'horizontal pass through':
+            return result
+
+        return ['no transform found']
 
     #Merged all figures in problem + solution into a single large image
     def create_merged_image(self):
@@ -144,17 +239,23 @@ class Agent:
     def get_horizontal_symmetry_measure(self, image):
         return self.get_similarity(image, ImageOps.flip(image))
 
+    def find_most_similar_solution(self, fig):
+        similarity_scores = []
+        for solution in self.solutions:
+            similarity_scores.append(self.get_similarity(fig.image, solution.image))
+        return similarity_scores.index(max(similarity_scores)) + 1
+
     def get_solution(self):
         answer = -1
 
-        '''
+
+        # *** REAL CODE ***
         # Check for holistic symmetry
         vertical_symmetry_measures = []
         horizontal_symmetry_measures = []
         for solution in self.solutions:
             self.figure_sol = solution
             holistic_image = self.create_merged_image()
-            holistic_image.show()
             vertical_symmetry_measures.append(self.get_vertical_symmetry_measure(holistic_image))
             horizontal_symmetry_measures.append(self.get_horizontal_symmetry_measure(holistic_image))
         # Check vertical
@@ -165,10 +266,93 @@ class Agent:
         max_measure = max(horizontal_symmetry_measures)
         if max_measure > self.threshold:
             return horizontal_symmetry_measures.index(max_measure) + 1
-        '''
 
-        self.get_transform(self.figure_a, self.figure_b, self.figure_c)
-        
+
+        # Horizontal transforms alone have been sufficient for the practice problems encountered
+        transform = self.get_transform(self.figure_a, self.figure_b, self.figure_c)
+
+        # These values used later on
+        self.figure_g.identify_objects()
+        self.figure_g.find_centroids()
+        self.figure_h.identify_objects()
+        self.figure_h.find_centroids()
+
+        if transform[0] == 'resize':
+            # if at this point, only 2 objects in figure
+            # Get size of object in question and get scale factor from transform data
+            obj = self.figure_h.objects[1]
+            width_obj, height_obj = obj.size()
+            width_trans, height_trans = transform[1]
+            scale = (1 + width_trans / float(width_obj), 1 + height_trans / float(height_obj))
+
+            im = self.figure_h.image
+            width, height = im.size
+            im_resized = im.resize((int(width * scale[0]), int(height * scale[1])), Image.BILINEAR)
+            width_new, height_new = im_resized.size
+            width_diff = width_new - width
+            height_diff = height_new - height
+            box = (width_diff/2, height_diff/2, width_new - width_diff/2, height_new - height_diff/2)
+            fig = Figure(im_resized.crop(box))
+            answer = self.find_most_similar_solution(fig)
+
+        elif transform[0] == 'add and translate':
+            translate_distance = transform[1]
+            obj1 = self.figure_g.objects[1]
+            size = self.figure_g.image.size
+
+            init_l_val = 255
+            obj1_new = Object((0, 0), 0)
+            obj2_new = Object((0, 0), 0)
+            obj1_new.remove_pixel((0, 0))
+            obj2_new.remove_pixel((0, 0))
+
+            # Slide first two objects away from each other
+            for coord in obj1.area:
+                obj1_new.add_pixel((coord[0] + translate_distance*2, coord[1]))
+                obj2_new.add_pixel((coord[0] - translate_distance*2, coord[1]))
+
+            # Make new image with translated objects
+            image_new = Image.new('L', size, color=init_l_val)
+            for xy in obj1_new.area:
+                image_new.putpixel(xy, 0)
+            for xy in obj2_new.area:
+                image_new.putpixel(xy, 0)
+            for xy in obj1.area:
+                image_new.putpixel(xy, 0)
+
+            fig = Figure(image_new)
+            answer = self.find_most_similar_solution(fig)
+
+        elif transform[0] == 'horizontal pass through':
+            for solution in self.solutions:
+                solution.identify_objects()
+                num_dark_obj = 0
+                for obj in solution.objects:
+                    if obj.l_val < 128:
+                        num_dark_obj += 1
+                if num_dark_obj < 2:
+                    continue
+
+                size = solution.image.size
+                im_centroid = (size[0]/2, size[1]/2)
+                max_distance = size[0]/2
+                for i in xrange(2, max_distance, 2):
+                    objects_new = []
+                    for obj in solution.objects:
+                        if obj.l_val < 128:
+                            # On the left side
+                            if obj.centroid[0] < im_centroid[0]:
+                                obj_new = self.translate_object(obj, (i, 0))
+                            # On the right side
+                            else:
+                                obj_new = self.translate_object(obj, (-i, 0))
+
+                            objects_new.append(obj_new)
+                    image_new = self.image_from_objects(size, objects_new)
+                    if self.is_equal(image_new, solution.image):
+                        answer = self.solutions.index(solution) + 1
+                        return answer
+
         return answer
 
     def Solve(self, problem):
