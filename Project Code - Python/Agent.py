@@ -73,8 +73,8 @@ class Agent:
             for xy in obj.area:
                 try:
                     image.putpixel(xy, 0)
-                except:
-                    print xy
+                except IndexError:
+                    pass
 
         return image
 
@@ -90,8 +90,8 @@ class Agent:
             for j in xrange(1, len(figure1.objects), 1):
                 obj = figure1.objects[j]
 
-                # Only interested in dark objects
-                if obj.l_val < 128:
+                # Only interested in dark objects whose centroids are not in the center of the image
+                if obj.l_val < 128 and abs(obj.centroid[0] - im_centroid[0]) > 3:
                     # On the left side
                     if obj.centroid[0] < im_centroid[0]:
                         obj_new = self.translate_object(obj, (i, 0))
@@ -167,10 +167,13 @@ class Agent:
                 image_new = Image.new('L', size, color=init_l_val)
 
                 # Make new image with translated objects
-                for xy in obj1_new.area:
-                    image_new.putpixel(xy, 0)
-                for xy in obj2_new.area:
-                    image_new.putpixel(xy, 0)
+                try:
+                    for xy in obj1_new.area:
+                        image_new.putpixel(xy, 0)
+                    for xy in obj2_new.area:
+                        image_new.putpixel(xy, 0)
+                except IndexError:
+                    break
 
                 # Check if it is correct
                 if self.is_equal(image_new, figure2.image):
@@ -370,7 +373,7 @@ class Agent:
         self.figure_f = Figure(problem.figures['F'].visualFilename)
         self.figure_g = Figure(problem.figures['G'].visualFilename)
         self.figure_h = Figure(problem.figures['H'].visualFilename)
-
+        self.solutions = []
         problem_figure_keys = sorted(problem.figures.keys())
         num_solutions = 8
         for i in range(num_solutions):
