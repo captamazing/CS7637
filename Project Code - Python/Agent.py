@@ -56,6 +56,17 @@ class Agent:
                 max_similarity = max(similarity, max_similarity)
         return max_similarity
 
+    # Checks for vertical symmetry (across vertical axis)
+    def get_vertical_symmetry_measure(self, image):
+        return self.get_similarity(image, ImageOps.mirror(image))
+
+    # Checks for horizontal symmetry (across horizontal axis)
+    def get_horizontal_symmetry_measure(self, image):
+        return self.get_similarity(image, ImageOps.flip(image))
+
+    def has_vertical_symmetry(self, image):
+        measure = self.get_vertical_symmetry_measure(image)
+        return measure >= self.threshold
 
     def translate_object(self, obj, distance):
         obj_new = Object((0, 0), 0)
@@ -128,6 +139,7 @@ class Agent:
         '''
 
         # Check for resizing
+        # Figures must have only two objects to qualify
         if len(figure1.objects) == len(figure2.objects) == len(figure3.objects) == 2:
             # Check for simple shape resize
             obj1 = figure1.objects[1]
@@ -145,8 +157,9 @@ class Agent:
                 resize_amount = ((xy_diff_23[0] + xy_diff_12[0]) / 2, (xy_diff_23[1] + xy_diff_12[1]) / 2)
                 return ['resize', resize_amount]
 
-        if len(figure1.objects) >= 2:
-            # Check for Add + Horizontal Slide
+        # Check for Add + Horizontal Slide
+        # Initial fig must have 2 objects besides the bg and have horizontal symmetry
+        if len(figure1.objects) >= 2 and self.has_vertical_symmetry(figure1.image):
             obj1 = figure1.objects[1]
             size = figure1.image.size
             width_image = size[0]
@@ -194,9 +207,11 @@ class Agent:
                         return ['add and translate', slide_distance]
 
         # Check for Horizontal Pass Through
-        result = self.horizontal_pass_through(figure1, figure2, figure3)
-        if result[0] == 'horizontal pass through':
-            return result
+        # Must have vertical symmetry to continue
+        if self.has_vertical_symmetry(figure1.image):
+            result = self.horizontal_pass_through(figure1, figure2, figure3)
+            if result[0] == 'horizontal pass through':
+                return result
 
         return ['no transform found']
 
@@ -234,14 +249,6 @@ class Agent:
 
         return merged_img
 
-    #Checks for vertical symmetry (across vertical axis)
-    def get_vertical_symmetry_measure(self, image):
-        return self.get_similarity(image, ImageOps.mirror(image))
-
-    #Checks for horizontal symmetry (across horiontal axis)
-    def get_horizontal_symmetry_measure(self, image):
-        return self.get_similarity(image, ImageOps.flip(image))
-
     def find_most_similar_solution(self, fig):
         similarity_scores = []
         for solution in self.solutions:
@@ -250,7 +257,6 @@ class Agent:
 
     def get_solution(self):
         answer = -1
-
 
         # *** REAL CODE ***
         # Check for holistic symmetry
