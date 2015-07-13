@@ -139,8 +139,8 @@ class Agent:
         '''
 
         # Check for resizing
-        # Figures must have only two objects to qualify
-        if len(figure1.objects) == len(figure2.objects) == len(figure3.objects) == 2:
+        # Figures must have only one object to qualify
+        if len(figure1.objects) == len(figure2.objects) == len(figure3.objects) == 1:
             # Check for simple shape resize
             obj1 = figure1.objects[1]
             obj2 = figure2.objects[1]
@@ -158,8 +158,8 @@ class Agent:
                 return ['resize', resize_amount]
 
         # Check for Add + Horizontal Slide
-        # Initial fig must have 2 objects besides the bg and have horizontal symmetry
-        if len(figure1.objects) >= 2 and self.has_vertical_symmetry(figure1.image):
+        # Initial fig must have 1 object and have horizontal symmetry
+        if len(figure1.objects) == 1 and self.has_vertical_symmetry(figure1.image):
             obj1 = figure1.objects[1]
             size = figure1.image.size
             width_image = size[0]

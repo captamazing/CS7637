@@ -7,7 +7,7 @@ class Figure:
         if isinstance(image_source, str):
             # Load image from file and make it black or white (no grey!)
             self.image = Image.open(image_source).convert('L').point(lambda x: 0 if x < 255 else 255, '1')
-            #self.image = Image.open(image_source).convert('L').point(lambda x: 0 if x == 0 else 255, '1')
+            # self.image = Image.open(image_source).convert('L').point(lambda x: 0 if x == 0 else 255, '1')
         elif isinstance(image_source, Image.Image):
             self.image = image_source.convert('L').point(lambda x: 0 if x < 255 else 255, '1')
 
@@ -22,7 +22,8 @@ class Figure:
         return pixels
 
     # Identifies all contiguous figures in these images
-    # Assumes images are comprised of black and white pixels ONLY. no grey!
+    # Only includes black objects from the image
+    # ((Assumes images are comprised of black and white pixels ONLY. no grey!))
     def identify_objects(self):
         im = copy.deepcopy(self.image)
         width, height = im.size
@@ -40,7 +41,6 @@ class Figure:
                     dark_fill_val += 1
                 elif l_val == 255:
                     ImageDraw.floodfill(im, xy, light_fill_val)
-                    self.objects.append(Object(xy, light_fill_val))
                     light_fill_val -= 1
                 else:
                     for obj in self.objects:

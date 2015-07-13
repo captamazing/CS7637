@@ -1,5 +1,27 @@
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageOps
 
+
+# Edge finding
+#image1 = Image.open('1.png')
+image7 = Image.open('7.png')
+image8 = Image.open('8.png')
+images = [image8, image7]
+
+for image in images:
+    image = image.filter(ImageFilter.CONTOUR).convert('L').point(lambda x: 0 if x < 128 else 255, '1')
+    image.show()
+
+    '''
+    image = image.filter(ImageFilter.FIND_EDGES)
+    image.show()
+    image = image.convert('L').point(lambda x: 0 if x < 255 else 255, '1')
+    image.show()
+    ImageOps.invert(image)
+    image.show()
+'''
+pass
+
+'''
 filename = "Lenna.png"
 original = Image.open("Lenna.png")
 im = original.crop((0, 0, 100, 100))
@@ -28,6 +50,7 @@ try:
 
 except:
     print "unable to load image"
+'''
 
 '''
 ImageOps
