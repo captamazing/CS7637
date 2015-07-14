@@ -31,8 +31,6 @@ class Object:
                 diff_stats = ImageStat.Stat(diff)
                 similarity = 1.0 - ((diff_stats.sum[0] / 255) / num_pixels)
                 max_similarity = max(similarity, max_similarity)
-
-        print max_similarity
         return max_similarity >= self.threshold
 
     def __ne__(self, other):
