@@ -3,7 +3,9 @@ from PIL import Image
 from Object import Object
 import copy
 
-def image_and(im1, im2):
+def figure_and(fig1, fig2):
+    im1 = fig1.image
+    im2 = fig2.image
     if im1.size != im2.size:
         raise Exception('Images must be same size to AND them')
     size = im1.size
@@ -14,9 +16,11 @@ def image_and(im1, im2):
             xy = x, y
             if im1.getpixel(xy) == im2.getpixel(xy) == 0:
                 image.putpixel(xy, 0)
-    return image
+    return Figure(image)
 
-def image_xor(im1, im2):
+def figure_xor(fig1, fig2):
+    im1 = fig1.image
+    im2 = fig2.image
     if im1.size != im2.size:
         raise Exception('Images must be same size to XOR them')
     size = im1.size
@@ -27,7 +31,7 @@ def image_xor(im1, im2):
             xy = x, y
             if im1.getpixel(xy) != im2.getpixel(xy):
                 image.putpixel(xy, 0)
-    return image
+    return Figure(image)
 
 def figure_add(fig1, fig2):
     if fig1.image.size != fig2.image.size:
@@ -44,28 +48,35 @@ def figure_add(fig1, fig2):
         for xy in obj2.area:
             image.putpixel(xy, 0)
 
-    return image
+    return Figure(image)
 
 def figure_subtract(fig1, fig2):
     if fig1.image.size != fig2.image.size:
         raise Exception('Figures must be same size to SUBTRACT them')
-    size = fig1.image.size
-    image = Image.new('L', size, color=255)
 
-    for x in range(size[0]):
-        for y in range(size[1]):
-            xy = x, y
-            if im2.getpixel(xy) == 0:
-                image.putpixel(xy, 255)
-    return image
+    image = copy.deepcopy(fig1.image)
+
+    for obj2 in fig2.objects:
+        for xy in obj2.area:
+            image.putpixel(xy, 255)
+
+    return Figure(image)
 
 fig_e10_a = Figure("E-10-A.png")
 fig_e10_b = Figure("E-10-B.png")
 
-image_and(fig_e10_a.image, fig_e10_b.image).show()
-image_xor(fig_e10_a.image, fig_e10_b.image).show()
-image_add(fig_e10_b.image, fig_e10_a.image).show()
-image_subtract(fig_e10_b.image, fig_e10_a.image).show()
+print 'Identifying objects...'
+fig_e10_a.identify_objects()
+fig_e10_b.identify_objects()
+
+print 'Doing the maths...'
+figure_and(fig_e10_a, fig_e10_b)
+figure_xor(fig_e10_a, fig_e10_b)
+figure_add(fig_e10_b, fig_e10_a)
+figure_subtract(fig_e10_b, fig_e10_a)
+
+print 'Done\n'
+
 
 '''
 fig1 = Figure("1.png")

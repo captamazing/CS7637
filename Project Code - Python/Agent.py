@@ -13,7 +13,7 @@
 from PIL import Image, ImageChops, ImageOps, ImageStat, ImageDraw
 from Figure import Figure
 from Object import Object
-import time
+import time, copy
 
 class Agent:
     attribute_list = ['shape', 'fill', 'size', 'angle', 'inside', 'above', 'overlaps', 'alignment']
@@ -131,6 +131,65 @@ class Agent:
         obj_new.find_centroid()
         return obj_new
 
+    def figure_and(self, fig1, fig2):
+        im1 = fig1.image
+        im2 = fig2.image
+        if im1.size != im2.size:
+            raise Exception('Images must be same size to AND them')
+        size = im1.size
+        image = Image.new('L', size, color=255)
+
+        for x in range(size[0]):
+            for y in range(size[1]):
+                xy = x, y
+                if im1.getpixel(xy) == im2.getpixel(xy) == 0:
+                    image.putpixel(xy, 0)
+        return Figure(image)
+
+    def figure_xor(self, fig1, fig2):
+        im1 = fig1.image
+        im2 = fig2.image
+        if im1.size != im2.size:
+            raise Exception('Images must be same size to XOR them')
+        size = im1.size
+        image = Image.new('L', size, color=255)
+
+        for x in range(size[0]):
+            for y in range(size[1]):
+                xy = x, y
+                if im1.getpixel(xy) != im2.getpixel(xy):
+                    image.putpixel(xy, 0)
+        return Figure(image)
+
+    def figure_add(self, fig1, fig2):
+        if fig1.image.size != fig2.image.size:
+            raise Exception('Figures must be same size to SUBTRACT them')
+
+        size = fig1.image.size
+        image = Image.new('L', size, color=255)
+
+        for obj1 in fig1.objects:
+            for xy in obj1.area:
+                image.putpixel(xy, 0)
+
+        for obj2 in fig2.objects:
+            for xy in obj2.area:
+                image.putpixel(xy, 0)
+
+        return Figure(image)
+
+    def figure_subtract(self, fig1, fig2):
+        if fig1.image.size != fig2.image.size:
+            raise Exception('Figures must be same size to SUBTRACT them')
+
+        image = copy.deepcopy(fig1.image)
+
+        for obj2 in fig2.objects:
+            for xy in obj2.area:
+                image.putpixel(xy, 255)
+
+        return Figure(image)
+
     def horizontal_pass_through(self, figure1, figure2, figure3):
         im = figure1.image
         size = im.size
@@ -164,14 +223,19 @@ class Agent:
         return ['NOT horizontal pass through']
 
     def get_transform(self):
-
-        '''
-        *** TEST CODE ***
-        # Take difference of images and show result
-        fig_diff = Figure(ImageChops.difference(figure_a.image, figure_b.image))
-        fig_diff.identify_objects()
-        fig_diff.image.show()
-        '''
+        # Boolean Operators
+        # Check for adding (left + middle = right)
+        if self.is_equal(self.figure_add(self.figure_a, self.figure_b).image, self.figure_c.image):
+            return ['add']
+        # Check for subtracting (left - middle = right)
+        if self.is_equal(self.figure_subtract(self.figure_a, self.figure_b).image, self.figure_c.image):
+            return ['subtract']
+        # Check for XOR-ing (left XOR middle = right)
+        if self.is_equal(self.figure_xor(self.figure_a, self.figure_b).image, self.figure_c.image):
+            return ['xor']
+        # Check for and-ing (left AND middle = right)
+        if self.is_equal(self.figure_and(self.figure_a, self.figure_b).image, self.figure_c.image):
+            return ['and']
         '''
         # Check for resizing
         # Figures must have only one object to qualify
@@ -247,7 +311,7 @@ class Agent:
             result = self.horizontal_pass_through(self.figure_a, self.figure_b, self.figure_c)
             if result[0] == 'horizontal pass through':
                 return result
-        '''
+
         # Check for Rotate Figures in row
         # Figures in row must be unique
         if (not self.is_equal(self.figure_a.image, self.figure_b.image)
@@ -269,12 +333,12 @@ class Agent:
                   and self.is_equal(self.figure_e.image, self.figure_g.image)
                   and self.is_equal(self.figure_f.image, self.figure_h.image)):
                     return ['rotate figures in row', self.figure_b]
-
+        '''
         return ['no transform found']
 
     def get_solution(self):
         answer = -1
-
+        '''
         # *** REAL CODE ***
         # Check for holistic symmetry
         vertical_symmetry_measures = []
@@ -292,11 +356,27 @@ class Agent:
         max_measure = max(horizontal_symmetry_measures)
         if max_measure > self.threshold:
             return horizontal_symmetry_measures.index(max_measure) + 1
-
+        '''
         # Horizontal transforms alone have been sufficient for the practice problems encountered
         transform = self.get_transform()
 
-        if transform[0] == 'resize':
+        if transform[0] == 'add':
+            fig_sum = self.figure_add(self.figure_g, self.figure_h)
+            answer = self.find_most_similar_solution(fig_sum)
+
+        elif transform[0] == 'subtract':
+            fig_diff = self.figure_subtract(self.figure_g, self.figure_h)
+            answer = self.find_most_similar_solution(fig_diff)
+
+        elif transform[0] == 'xor':
+            fig_xor = self.figure_xor(self.figure_g, self.figure_h)
+            answer = self.find_most_similar_solution(fig_xor)
+
+        elif transform[0] == 'and':
+            fig_and = self.figure_and(self.figure_g, self.figure_h)
+            answer = self.find_most_similar_solution(fig_and)
+
+        elif transform[0] == 'resize':
             # if at this point, only 2 objects in figure
             # Get size of object in question and get scale factor from transform data
             obj = self.figure_h.objects[1]
@@ -419,7 +499,7 @@ class Agent:
         print 'Searching for a solution...'
         answer = self.get_solution()
 
-        print 'Time to find solution: ', time.time() - start_time, ' seconds'
+        print 'Time to find solution: ', time.time() - start_time, ' seconds\n'
         return answer
 
 
