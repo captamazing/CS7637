@@ -7,7 +7,7 @@ class Figure:
         if isinstance(image_source, str):
             # Load image from file and make it black or white (no grey!)
             self.image = Image.open(image_source).convert('L').point(lambda x: 0 if x < 255 else 255, '1')
-            # self.image = Image.open(image_source).convert('L').point(lambda x: 0 if x == 0 else 255, '1')
+            #self.image = Image.open(image_source).convert('L').point(lambda x: 0 if x == 0 else 255, '1')
         elif isinstance(image_source, Image.Image):
             self.image = image_source.convert('L').point(lambda x: 0 if x < 255 else 255, '1')
 

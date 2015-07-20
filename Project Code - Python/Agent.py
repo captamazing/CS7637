@@ -10,10 +10,11 @@
 
 # Install Pillow and uncomment this line to access image processing.
 
-from PIL import Image, ImageChops, ImageOps, ImageStat, ImageDraw
+from PIL import Image, ImageChops, ImageOps, ImageStat
 from Figure import Figure
 from Object import Object
-import time, copy
+import time
+import copy
 
 class Agent:
     attribute_list = ['shape', 'fill', 'size', 'angle', 'inside', 'above', 'overlaps', 'alignment']
@@ -198,20 +199,14 @@ class Agent:
 
         for i in xrange(0, max_distance, 2):
             objects_new = []
-
-            for j in xrange(1, len(figure1.objects), 1):
-                obj = figure1.objects[j]
-
-                # Only interested in dark objects whose centroids are not in the center of the image
-                if obj.l_val < 128 and abs(obj.centroid[0] - im_centroid[0]) > 3:
-                    # On the left side
-                    if obj.centroid[0] < im_centroid[0]:
-                        obj_new = self.translate_object(obj, (i, 0))
-                    # On the right side
-                    else:
-                        obj_new = self.translate_object(obj, (-i, 0))
-
-                    objects_new.append(obj_new)
+            for obj in figure1.objects:
+                # On the left side
+                if obj.centroid[0] < im_centroid[0]:
+                    obj_new = self.translate_object(obj, (i, 0))
+                # On the right side
+                else:
+                    obj_new = self.translate_object(obj, (-i, 0))
+                objects_new.append(obj_new)
             # end of loop
 
             im_new = self.image_from_objects(size, objects_new)
@@ -236,6 +231,7 @@ class Agent:
         # Check for and-ing (left AND middle = right)
         if self.is_equal(self.figure_and(self.figure_a, self.figure_b).image, self.figure_c.image):
             return ['and']
+
         '''
         # Check for resizing
         # Figures must have only one object to qualify
@@ -255,55 +251,48 @@ class Agent:
             if abs(xy_diff_23[0] - xy_diff_12[0]) < 3 and abs(xy_diff_23[1] - xy_diff_12[1]) < 3:
                 resize_amount = ((xy_diff_23[0] + xy_diff_12[0]) / 2, (xy_diff_23[1] + xy_diff_12[1]) / 2)
                 return ['resize', resize_amount]
+        '''
 
         # Check for Add + Horizontal Slide
         # Initial fig must have 1 object and have horizontal symmetry
         if len(self.figure_a.objects) == 1 and self.has_vertical_symmetry(self.figure_a.image):
-            obj1 = self.figure_a.objects[0]
+            obj_orig = self.figure_a.objects[0]
             size = self.figure_a.image.size
             width_image = size[0]
-            width_obj = obj1.size()[0]
+            width_obj = obj_orig.size()[0]
             max_slide_distance = (width_image / 2) - (width_obj / 2)
 
             for i in xrange(0, max_slide_distance, 2):
-                init_l_val = 255
-                obj1_new = Object((0, 0), 0)
-                obj2_new = Object((0, 0), 0)
-                obj1_new.remove_pixel((0, 0))
-                obj2_new.remove_pixel((0, 0))
-
                 # Slide first two objects away from each other
-                for coord in obj1.area:
-                    obj1_new.add_pixel((coord[0] + i, coord[1]))
-                    obj2_new.add_pixel((coord[0] - i, coord[1]))
-                image_new = Image.new('L', size, color=init_l_val)
+                obj_left = self.translate_object(obj_orig, (i, 0))
+                obj_right = self.translate_object(obj_orig, (-i, 0))
 
                 # Make new image with translated objects
-                try:
-                    for xy in obj1_new.area:
-                        image_new.putpixel(xy, 0)
-                    for xy in obj2_new.area:
-                        image_new.putpixel(xy, 0)
-                except IndexError:
-                    break
+                image_left_right = self.image_from_objects(size, [obj_left, obj_right])
 
                 # Check if it is correct
-                if self.is_equal(image_new, self.figure_b.image):
-                    image_new = Image.new('L', size, color=init_l_val)
+                if self.is_equal(image_left_right, self.figure_b.image):
+                    # Continue separating
+                    for j in xrange(i, max_slide_distance, 2):
+                        # Slide first two objects away from each other
+                        obj_left = self.translate_object(obj_orig, (j, 0))
+                        obj_right = self.translate_object(obj_orig, (-j, 0))
+                        obj_center = obj_orig
 
-                    # Translate objects again
-                    for xy in obj1_new.area:
-                        image_new.putpixel((xy[0] + i, xy[1]), 0)
-                    for xy in obj2_new.area:
-                        image_new.putpixel((xy[0] - i, xy[1]), 0)
-                    # Add third object
-                    for xy in obj1.area:
-                        image_new.putpixel(xy, 0)
+                        # Draw image with third object
+                        image_left_right_center = self.image_from_objects(size, [obj_left, obj_right, obj_center])
+                        image_left_right = self.image_from_objects(size, [obj_left, obj_right, obj_center])
 
-                    # Check that transformation propagates to 3rd figure
-                    if self.is_equal(image_new, self.figure_c.image):
-                        slide_distance = i
-                        return ['add and translate', slide_distance]
+                        # Check that transformation propagates to 3rd figure
+                        if self.is_equal(image_left_right_center, self.figure_c.image):
+                            slide_distance = j
+                            return ['add and translate', slide_distance]
+                        if self.is_equal(image_left_right, self.figure_c.image):
+                            slide_distance = j
+                            return ['duplicate and separate', slide_distance]
+
+                    break  # get out of outer loop
+
 
         # Check for Horizontal Pass Through
         # Must have vertical symmetry to continue
@@ -333,12 +322,59 @@ class Agent:
                   and self.is_equal(self.figure_e.image, self.figure_g.image)
                   and self.is_equal(self.figure_f.image, self.figure_h.image)):
                     return ['rotate figures in row', self.figure_b]
-        '''
+
+            # Check for Shape Count Combination
+            # Check that each figure has a unique object shape on a
+            # row-by-row basis
+            if ((self.figure_a.objects[0] != self.figure_b.objects[0]
+                and self.figure_a.objects[0] != self.figure_c.objects[0]
+                and self.figure_b.objects[0] != self.figure_c.objects[0])
+                and
+                (self.figure_a.objects[0] != self.figure_b.objects[0]
+                and self.figure_a.objects[0] != self.figure_c.objects[0]
+                and self.figure_b.objects[0] != self.figure_c.objects[0])):
+                shapes = [self.figure_a.objects[0], self.figure_b.objects[0], self.figure_c.objects[0]]
+                counts = [len(self.figure_a.objects), len(self.figure_b.objects), len(self.figure_c.objects)]
+                combinations = []
+
+                # Create list of combinations of shapes and shape counts
+                for shape in shapes:
+                    for count in counts:
+                        combinations.append((shape, count))
+
+                is_transform = True
+                objects_identical = True
+                for figure in self.figures:
+                    shape = figure.objects[0]
+                    count = len(figure.objects)
+
+                    # Make sure objects in figure are all the same
+                    for i in range(count):
+                        if figure.objects[i] != figure.objects[0]:
+                            objects_identical = False
+                            break
+
+                    # If all objects in figure are same
+                    if objects_identical:
+                        combination = shape, count
+
+                        # If combination exists, remove from list
+                        # otherwise it this proposed transform is not correct
+                        if combination in combinations:
+                            combinations.remove(combination)
+                        else:
+                            is_transform = False
+                            break
+                    else:
+                        is_transform = False
+                if is_transform:
+                    return ["shape count combination", combinations[0]]
+
         return ['no transform found']
 
     def get_solution(self):
         answer = -1
-        '''
+
         # *** REAL CODE ***
         # Check for holistic symmetry
         vertical_symmetry_measures = []
@@ -356,10 +392,10 @@ class Agent:
         max_measure = max(horizontal_symmetry_measures)
         if max_measure > self.threshold:
             return horizontal_symmetry_measures.index(max_measure) + 1
-        '''
+
         # Horizontal transforms alone have been sufficient for the practice problems encountered
         transform = self.get_transform()
-
+        print transform[0]
         if transform[0] == 'add':
             fig_sum = self.figure_add(self.figure_g, self.figure_h)
             answer = self.find_most_similar_solution(fig_sum)
@@ -379,7 +415,7 @@ class Agent:
         elif transform[0] == 'resize':
             # if at this point, only 2 objects in figure
             # Get size of object in question and get scale factor from transform data
-            obj = self.figure_h.objects[1]
+            obj = self.figure_h.objects[0]
             width_obj, height_obj = obj.size()
             width_trans, height_trans = transform[1]
             scale = (1 + width_trans / float(width_obj), 1 + height_trans / float(height_obj))
@@ -396,7 +432,7 @@ class Agent:
 
         elif transform[0] == 'add and translate':
             translate_distance = transform[1]
-            obj1 = self.figure_g.objects[1]
+            obj1 = self.figure_g.objects[0]
             size = self.figure_g.image.size
 
             init_l_val = 255
@@ -422,40 +458,60 @@ class Agent:
             fig = Figure(image_new)
             answer = self.find_most_similar_solution(fig)
 
+        elif transform[0] == 'duplicate and separate':
+            translate_distance = transform[1]
+            objs_orig = self.figure_g.objects
+            size = self.figure_g.image.size
+
+            # Duplicate objects and separate them
+            objs_left = []
+            objs_right = []
+            for obj in objs_orig:
+                objs_left.append(self.translate_object(obj, (translate_distance[0], translate_distance[1])))
+                objs_right.append(self.translate_object(obj, (-translate_distance[0], translate_distance[1])))
+
+            # Make new image with translated objects
+            image_left_right = self.image_from_objects(size, objs_left + objs_right)
+
+            fig = Figure(image_left_right)
+            answer = self.find_most_similar_solution(fig)
+
         elif transform[0] == 'horizontal pass through':
-            for solution in self.solutions:
-                num_dark_obj = 0
-                for obj in solution.objects:
-                    if obj.l_val < 128:
-                        num_dark_obj += 1
-                if num_dark_obj < 2:
-                    continue
+            size = self.figure_g.image.size
+            im_centroid = (size[0]/2, size[1]/2)
+            max_x = 0
+            for obj in self.figure_g.objects:
+                if obj.centroid[0] < im_centroid[0]:
+                    if obj.max_x > max_x:
+                        max_x = obj.max_x
+            max_distance = int(size[0]/2)
 
-                size = solution.image.size
-                im_centroid = (size[0]/2, size[1]/2)
-                max_distance = size[0]/2
-                for i in xrange(2, max_distance, 2):
-                    objects_new = []
-                    for obj in solution.objects:
-                        if obj.l_val < 128:
-                            # On the left side
-                            if obj.centroid[0] < im_centroid[0]:
-                                obj_new = self.translate_object(obj, (i, 0))
-                            # On the right side
-                            else:
-                                obj_new = self.translate_object(obj, (-i, 0))
-
-                            objects_new.append(obj_new)
-                    image_new = self.image_from_objects(size, objects_new)
+            for i in xrange(int(max_distance/4 - 1), max_distance, 2):
+                objects_new = []
+                for obj in self.figure_g.objects:
+                    # On the left side
+                    if obj.centroid[0] < im_centroid[0]:
+                        obj_new = self.translate_object(obj, (i, 0))
+                    # On the right side
+                    else:
+                        obj_new = self.translate_object(obj, (-i, 0))
+                    objects_new.append(obj_new)
+                image_new = self.image_from_objects(size, objects_new)
+                for solution in self.solutions:
                     if self.is_equal(image_new, solution.image):
                         answer = self.solutions.index(solution) + 1
-                        return answer
 
         elif transform[0] == 'rotate figures in row':
             figure_to_match = transform[1]
+            answer = self.find_most_similar_solution(figure_to_match)
+
+        elif transform[0] == "shape count combination":
+            req_shape, req_count = transform[1]
+
             for solution in self.solutions:
-                if self.is_equal(figure_to_match.image, solution.image):
-                    return self.solutions.index(solution) + 1
+                # Check that solution meets shape/count requirements
+                if len(solution.objects) == req_count and solution.objects[0] == req_shape:
+                    answer = self.solutions.index(solution) + 1
 
         return answer
 
@@ -464,6 +520,11 @@ class Agent:
         problem_name = problem.name
         answer = -1
         scores = []
+
+        if 'Problem B' in problem_name or 'Problem C' in problem_name:
+            print problem_name, 'skipped\n'
+            return answer
+
         start_time = time.time()
 
         # Load all figures and make them black OR white (no grey!)

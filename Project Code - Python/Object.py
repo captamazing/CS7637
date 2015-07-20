@@ -1,7 +1,7 @@
 from PIL import Image, ImageFilter, ImageChops, ImageStat
 
 class Object:
-    threshold = .98
+    threshold = .96
     centroid = None
     max_x = 0
     min_x = 9999
