@@ -368,8 +368,10 @@ class Agent:
                     else:
                         is_transform = False
                 if is_transform:
+                    print "shape count comb"
                     return ["shape count combination", combinations[0]]
 
+        print "no transform found"
         return ['no transform found']
 
     def get_solution(self):
